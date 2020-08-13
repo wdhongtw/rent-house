@@ -8,6 +8,7 @@ import toml
 
 import fetcher
 import store
+import notify
 
 
 logger = logging.getLogger("crawler")
@@ -24,21 +25,39 @@ class Settings:
     core: typing.Dict[str, typing.Any]
     query: fetcher.QueryOptions
     storage: typing.Dict[str, typing.Any]
+    notify: typing.Dict[str, typing.Any]
 
     def __init__(self, path):
         settings = toml.load(path)
         self.core = settings["core"]
         self.query = settings["query"]
         self.storage = settings["storage"]
+        self.notify = settings["notify"]
 
 
 def scan(settings: Settings):
     logger.warning("Scan houses from web site")
+
     storage: fetcher.HouseStore = store.LiteHouseStore(
         settings.storage["sqlite"]["path"]
     )
+
+    notifier: fetcher.Notifier
+    if settings.core["should_notify"]:
+        notifier = notify.IftttNotifier(
+            logger,
+            fetcher.get_591_url,
+            settings.notify["ifttt"]["webhook_token"],
+            settings.notify["ifttt"]["event_name"],
+        )
+    else:
+        notifier = notify.EmptyNotifier()
+
     agent = fetcher.Fetcher(logger, settings.core["page_delay"])
-    scanner = fetcher.Scanner(logger, storage, agent, settings.core["batch_delay"])
+    scanner = fetcher.Scanner(
+        logger, storage, notifier, agent, settings.core["batch_delay"]
+    )
+
     scanner.scan_house(settings.query)
 
 

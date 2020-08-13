@@ -1,3 +1,4 @@
+import abc
 import json
 import logging
 import math
@@ -41,7 +42,7 @@ class House:
         house.description = source["fulladdress"]
         house.price_value = int(source["price"].replace(",", ""))
         house.price_unit = source["unit"]
-        house.area = source["area"]
+        house.area = int(source["area"])  # source value could be float
         house.refresh_time = source["refreshtime"]
 
         house.raw_data = json.dumps(source)
@@ -127,22 +128,38 @@ class Fetcher:
 HouseStore = typing.MutableMapping[int, House]
 
 
+class Notifier(typing.Protocol):
+    @abc.abstractmethod
+    def notify(self, house: House) -> None:
+        raise NotImplementedError()
+
+
+UrlGenerator = typing.Callable[[House], str]
+
+
+def get_591_url(house: House) -> str:
+    return "https://rent.591.com.tw/rent-detail-{}.html".format(house.post_id)
+
+
 class Scanner:
     _logger: logging.Logger
     _store: HouseStore
     _fetcher: Fetcher
     _scan_delay: float
+    _notifier: Notifier
 
     def __init__(
         self,
         logger: logging.Logger,
         storage: HouseStore,
+        notifier: Notifier,
         fetcher: Fetcher,
         delay: float,
     ):
         self._logger = logger
         self._store = storage
         self._fetcher = fetcher
+        self._notifier = notifier
         self._scan_delay = delay
 
     def __scan_house_once(self, options: QueryOptions):
@@ -151,10 +168,15 @@ class Scanner:
             if house.post_id in self._store:
                 continue
 
+            self._logger.info("Find new house %s", house.description)
             self._logger.info(
-                "Find new house %s %s", house.region, house.description
+                "House price: %s, area %s, link %s",
+                house.price_value,
+                house.area,
+                get_591_url(house),
             )
             self._store[house.post_id] = house
+            self._notifier.notify(house)
 
     def scan_house(self, options: QueryOptions):
         while True:

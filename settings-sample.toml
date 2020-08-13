@@ -1,5 +1,9 @@
-[query]
+[core]
+batch_delay = 5
+page_delay = 1
+should_notify = false
 
+[query]
 regionid = "3"
 section = "26"
 hasimg = "1"
@@ -9,3 +13,10 @@ shape = "2"
 rentprice = "3"
 option = "cold"
 other = "pet"
+
+[storage.sqlite]
+path = 'houses.sqlite3'
+
+[notify.ifttt]
+webhook_token = 'webhook-token-of-ifttt'
+event_name = 'house-event'
