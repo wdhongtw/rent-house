@@ -1,6 +1,7 @@
 settings.toml
 *.sqlite3
 *.db
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
