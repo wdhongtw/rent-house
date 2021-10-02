@@ -35,12 +35,17 @@ class House:
 
     @classmethod
     def from_json(cls, source) -> "House":
+        def parse_price(raw_price: str) -> int:
+            # Price may be something like 10,000~12,000
+            # or single value 12,000, here we take the higher price
+            prices = raw_price.split('~')
+            return int(prices[len(prices)-1].replace(",", ""))
         house = cls()
         house.post_id = source["post_id"]
         house.region = source["region_name"]
         house.section = source["section_name"]
         house.description = source["fulladdress"]
-        house.price_value = int(source["price"].replace(",", ""))
+        house.price_value = parse_price(source["price"])
         house.price_unit = source["unit"]
         house.area = int(source["area"])  # source value could be float
         house.refresh_time = source["refreshtime"]
